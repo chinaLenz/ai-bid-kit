@@ -1,0 +1,39 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "license-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-07-01",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": "./public"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "license-db",
+			"database_id": "YOUR_DATABASE_ID"
+		},
+		{
+			"binding": "license_db",
+			"database_name": "license-db",
+			"database_id": "0160b75f-578f-4625-a4f6-5e7d774a10c5",
+			"remote": true
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "R2_BUCKET",
+			"bucket_name": "app-packages"
+		}
+	],
+	"vars": {
+		"API_SECRET": "YOUR_SECRET_KEY_HERE"
+	}
+}
