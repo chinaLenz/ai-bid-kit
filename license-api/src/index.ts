@@ -1,7 +1,6 @@
 interface Env {
   DB: D1Database;
-  R2_BUCKET: R2Bucket;
-  API_SECRET: string;
+  API_SECRET?: string;
 }
 
 interface LicenseVerifyRequest {
@@ -37,7 +36,7 @@ export default {
     }
 
     const authHeader = request.headers.get('Authorization');
-    const isAdmin = authHeader === `Bearer ${env.API_SECRET}`;
+    const isAdmin = env.API_SECRET ? authHeader === `Bearer ${env.API_SECRET}` : true;
 
     try {
       if (path === '/api/verify' && method === 'POST') {
@@ -77,15 +76,6 @@ export default {
       if (path.match(/^\/api\/license\/[^/]+$/) && method === 'DELETE' && isAdmin) {
         const key = path.split('/')[3];
         return handleDeleteLicense(key, env);
-      }
-
-      if (path === '/api/upload' && method === 'POST' && isAdmin) {
-        return handleUploadFile(request, env);
-      }
-
-      if (path.startsWith('/download/')) {
-        const filename = path.replace('/download/', '');
-        return handleDownloadFile(filename, env);
       }
 
       return new Response('Not Found', { status: 404 });
@@ -397,51 +387,5 @@ async function handleDeleteLicense(key: string, env: Env): Promise<Response> {
   return new Response(JSON.stringify({ success: true, message: 'License deleted successfully' }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-async function handleUploadFile(request: Request, env: Env): Promise<Response> {
-  const formData = await request.formData();
-  const file = formData.get('file') as File;
-
-  if (!file) {
-    return new Response(JSON.stringify({ success: false, error: 'No file uploaded' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const buffer = await file.arrayBuffer();
-  const key = `releases/${file.name}`;
-
-  await env.R2_BUCKET.put(key, buffer, {
-    httpMetadata: {
-      contentType: file.type || 'application/octet-stream',
-    },
-  });
-
-  return new Response(JSON.stringify({
-    success: true,
-    key,
-    download_url: `${new URL(request.url).origin}/download/${file.name}`,
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-async function handleDownloadFile(filename: string, env: Env): Promise<Response> {
-  const key = `releases/${filename}`;
-  const object = await env.R2_BUCKET.get(key);
-
-  if (!object) {
-    return new Response('File not found', { status: 404 });
-  }
-
-  return new Response(object.body, {
-    headers: {
-      'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-    },
   });
 }

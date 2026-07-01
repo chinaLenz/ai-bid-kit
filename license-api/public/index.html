@@ -1,32 +1,167 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Hello, World!</title>
-	</head>
-	<body>
-		<h1 id="heading"></h1>
-		<p>This page comes from a static asset stored at `public/index.html` as configured in `wrangler.jsonc`.</p>
-		<button id="button" type="button">Fetch a random UUID</button>
-		<output id="random" for="button"></output>
-		<script>
-			fetch('/message')
-				.then((resp) => resp.text())
-				.then((text) => {
-					const h1 = document.getElementById('heading');
-					h1.textContent = text;
-				});
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>License API Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    h1 { color: #1a1a2e; margin-bottom: 30px; text-align: center; }
+    .section { background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    h2 { color: #16213e; margin-bottom: 16px; font-size: 18px; }
+    input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
+    button { background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #0056b3; }
+    .result { background: #e9ecef; padding: 16px; border-radius: 8px; margin-top: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+    .success { color: #28a745; }
+    .error { color: #dc3545; }
+  </style>
+</head>
+<body>
+  <h1>License API 测试控制台</h1>
 
-			const button = document.getElementById("button");
-			button.addEventListener("click", () => {
-				fetch('/random')
-					.then((resp) => resp.text())
-					.then((text) => {
-						const random = document.getElementById('random');
-						random.textContent = text;
-					});
-			});
-		</script>
-	</body>
+  <div class="section">
+    <h2>创建许可证</h2>
+    <input type="text" id="email" placeholder="邮箱（可选）">
+    <input type="text" id="expiresAt" placeholder="过期时间（可选，如：2025-12-31）">
+    <input type="number" id="maxDevices" placeholder="最大设备数（默认1）" value="1">
+    <button onclick="createLicense()">创建许可证</button>
+    <div class="result" id="createResult"></div>
+  </div>
+
+  <div class="section">
+    <h2>验证许可证</h2>
+    <input type="text" id="verifyKey" placeholder="许可证密钥">
+    <input type="text" id="verifyDevice" placeholder="设备ID">
+    <button onclick="verifyLicense()">验证许可证</button>
+    <div class="result" id="verifyResult"></div>
+  </div>
+
+  <div class="section">
+    <h2>激活设备</h2>
+    <input type="text" id="activateKey" placeholder="许可证密钥">
+    <input type="text" id="activateDevice" placeholder="设备ID">
+    <input type="text" id="activateName" placeholder="设备名称（可选）">
+    <button onclick="activateDevice()">激活设备</button>
+    <div class="result" id="activateResult"></div>
+  </div>
+
+  <div class="section">
+    <h2>检查版本更新</h2>
+    <input type="text" id="currentVersion" placeholder="当前版本" value="1.0.0">
+    <button onclick="checkVersion()">检查更新</button>
+    <div class="result" id="versionResult"></div>
+  </div>
+
+  <div class="section">
+    <h2>发布新版本</h2>
+    <input type="text" id="newVersion" placeholder="新版本号">
+    <input type="text" id="downloadUrl" placeholder="下载地址">
+    <textarea id="changelog" placeholder="更新日志" rows="3"></textarea>
+    <button onclick="publishVersion()">发布版本</button>
+    <div class="result" id="publishResult"></div>
+  </div>
+
+  <script>
+    const baseUrl = '';
+
+    async function createLicense() {
+      const email = document.getElementById('email').value;
+      const expiresAt = document.getElementById('expiresAt').value;
+      const maxDevices = parseInt(document.getElementById('maxDevices').value) || 1;
+      
+      try {
+        const res = await fetch(`${baseUrl}/api/license`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, expires_at: expiresAt || undefined, max_devices: maxDevices })
+        });
+        const data = await res.json();
+        document.getElementById('createResult').textContent = JSON.stringify(data, null, 2);
+        if (data.success) document.getElementById('createResult').className = 'result success';
+      } catch (e) {
+        document.getElementById('createResult').textContent = 'Error: ' + e.message;
+        document.getElementById('createResult').className = 'result error';
+      }
+    }
+
+    async function verifyLicense() {
+      const key = document.getElementById('verifyKey').value;
+      const device = document.getElementById('verifyDevice').value;
+      
+      try {
+        const res = await fetch(`${baseUrl}/api/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ license_key: key, device_id: device })
+        });
+        const data = await res.json();
+        document.getElementById('verifyResult').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('verifyResult').className = data.valid ? 'result success' : 'result error';
+      } catch (e) {
+        document.getElementById('verifyResult').textContent = 'Error: ' + e.message;
+        document.getElementById('verifyResult').className = 'result error';
+      }
+    }
+
+    async function activateDevice() {
+      const key = document.getElementById('activateKey').value;
+      const device = document.getElementById('activateDevice').value;
+      const name = document.getElementById('activateName').value;
+      
+      try {
+        const res = await fetch(`${baseUrl}/api/activate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ license_key: key, device_id: device, device_name: name || undefined })
+        });
+        const data = await res.json();
+        document.getElementById('activateResult').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('activateResult').className = data.success ? 'result success' : 'result error';
+      } catch (e) {
+        document.getElementById('activateResult').textContent = 'Error: ' + e.message;
+        document.getElementById('activateResult').className = 'result error';
+      }
+    }
+
+    async function checkVersion() {
+      const version = document.getElementById('currentVersion').value;
+      
+      try {
+        const res = await fetch(`${baseUrl}/api/version`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_version: version })
+        });
+        const data = await res.json();
+        document.getElementById('versionResult').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('versionResult').className = data.update_available ? 'result success' : 'result';
+      } catch (e) {
+        document.getElementById('versionResult').textContent = 'Error: ' + e.message;
+        document.getElementById('versionResult').className = 'result error';
+      }
+    }
+
+    async function publishVersion() {
+      const version = document.getElementById('newVersion').value;
+      const url = document.getElementById('downloadUrl').value;
+      const changelog = document.getElementById('changelog').value;
+      
+      try {
+        const res = await fetch(`${baseUrl}/api/version`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ version, download_url: url, changelog })
+        });
+        const data = await res.json();
+        document.getElementById('publishResult').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('publishResult').className = data.success ? 'result success' : 'result error';
+      } catch (e) {
+        document.getElementById('publishResult').textContent = 'Error: ' + e.message;
+        document.getElementById('publishResult').className = 'result error';
+      }
+    }
+  </script>
+</body>
 </html>
