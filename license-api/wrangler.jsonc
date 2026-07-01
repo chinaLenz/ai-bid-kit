@@ -18,7 +18,7 @@
 		{
 			"binding": "DB",
 			"database_name": "license-db",
-			"database_id": "YOUR_DATABASE_ID"
+			"database_id": "0160b75f-578f-4625-a4f6-5e7d774a10c5"
 		},
 		{
 			"binding": "license_db",
